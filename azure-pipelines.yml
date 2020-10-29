@@ -10,13 +10,44 @@ pool:
   vmImage: 'ubuntu-latest'
 
 steps:
+- task: ReplaceTokens@1
+  inputs:
+    sourcePath: 'src/main/resources'
+    filePattern: '*.properties'
+    tokenRegex: '__(\w+[.\w+]*)__'
 - task: Maven@3
   inputs:
     mavenPomFile: 'pom.xml'
-    mavenOptions: '-Xmx3072m'
-    javaHomeOption: 'JDKVersion'
-    jdkVersionOption: '1.8'
-    jdkArchitectureOption: 'x64'
+    options: '-DskipITs'
     publishJUnitResults: true
-    testResultsFiles: '**/surefire-reports/TEST-*.xml'
-    goals: 'package'
+    testResultsFiles: '**/TEST-*.xml'
+    javaHomeOption: 'JDKVersion'
+    mavenVersionOption: 'Default'
+    mavenAuthenticateFeed: false
+    effectivePomSkip: false
+    sonarQubeRunAnalysis: false
+- task: CopyFiles@2
+  inputs:
+    SourceFolder: '$(system.defaultworkingdirectory)'
+    Contents: |
+      **/*.jar
+      **/*.yaml
+    TargetFolder: '$(build.atifactstagingdirectory)'
+- task: DockerCompose@0
+  inputs:
+    containerregistrytype: 'Azure Container Registry'
+    azureSubscription: 'Microsoft Azure Sponsorship(3b6d5139-eecd-4746-8aa1-5954bd346a75)'
+    azureContainerRegistry: '{"loginServer":"mtcsdevgrtsacr02.azurecr.io", "id" : "/subscriptions/3b6d5139-eecd-4746-8aa1-5954bd346a75/resourceGroups/myResourceGroup/providers/Microsoft.ContainerRegistry/registries/mtcsDevGrtsACR02"}'
+    dockerComposeFile: '**/docker-compose.yml'
+    action: 'Build services'
+    additionalImageTags: '$(Build.BuildNumber)'
+    includeLatestTag: true
+- task: DockerCompose@0
+  inputs:
+    containerregistrytype: 'Azure Container Registry'
+    azureSubscription: 'Microsoft Azure Sponsorship(3b6d5139-eecd-4746-8aa1-5954bd346a75)'
+    azureContainerRegistry: '{"loginServer":"mtcsdevgrtsacr02.azurecr.io", "id" : "/subscriptions/3b6d5139-eecd-4746-8aa1-5954bd346a75/resourceGroups/myResourceGroup/providers/Microsoft.ContainerRegistry/registries/mtcsDevGrtsACR02"}'
+    dockerComposeFile: '**/docker-compose.yml'
+    action: 'Push services'
+    additionalImageTags: '$(Build.BuildNumber)'
+    includeLatestTag: true
